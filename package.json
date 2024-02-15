@@ -1,0 +1,15 @@
+{
+  "name": "sqlite-logger",
+  "version": "1.0.0",
+  "description": "A very trivial logger for sqlite",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": ["logger", "sqlite", "better-sqlite3", "logging"],
+  "author": "Brian Hammond <brian@fictorial.com>",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^9.4.1"
+  }
+}
