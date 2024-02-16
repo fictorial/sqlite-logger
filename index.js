@@ -40,15 +40,14 @@ function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
     stderrStream?.write(`${reverseNamedLevels[level]} [${ctx}] [${new Date().toISOString()}] ${msg}\n`);
   }
 
-  let interval;
-
+  let timeout;
   if (maxAge > 0) {
-    interval = setInterval(() => {
-        db.prepare('delete from msgs where ctime < datetime("now", ?)').run(`-${maxAge / 1000} seconds`);
+    const purge = () => {
+        db.prepare("delete from msgs where ctime < datetime('now', ?)").run(`-${maxAge / 1000} seconds`);
         db.exec(`vacuum`);
-      },
-      maxAgeInterval,
-    );
+        timeout = setTimeout(purge, maxAgeInterval);
+    };
+    purge();
   }
 
   const nop = () => {};
@@ -101,7 +100,7 @@ function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
       }));
     },
     close: () => {
-      if (interval) clearInterval(interval);
+      if (timeout) clearTimeout(timeout);
       db.close();
     }
   };
