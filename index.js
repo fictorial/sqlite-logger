@@ -23,8 +23,8 @@ function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
   const reverseNamedLevels = { 0: 'DEBUG', 1: 'INFO', 2: 'WARN', 3: 'ERROR' };
 
   path = path || ":memory:";
-  maxAge = maxAge || 30 * 24 * 60 * 60 * 1000;
-  maxAgeInterval = maxAgeInterval || 24 * 60 * 60 * 1000;
+  maxAge = maxAge !== undefined && maxAge || 30 * 24 * 60 * 60 * 1000;
+  maxAgeInterval = maxAgeInterval !== undefined && maxAgeInterval || 24 * 60 * 60 * 1000;
   const stderrStream = teeStderr && process.stderr;
 
   const db = new Database(path);
