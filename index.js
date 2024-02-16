@@ -40,22 +40,18 @@ const Database = require("better-sqlite3");
 
 function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
   const namedLevels = { debug: 0, info: 1, warn: 2, error: 3 };
-
   const reverseNamedLevels = { 0: "DEBUG", 1: "INFO", 2: "WARN", 3: "ERROR" };
 
   path = path || ":memory:";
 
   maxAge = (maxAge !== undefined && maxAge) || 30 * 24 * 60 * 60 * 1000;
-
   maxAgeInterval =
     (maxAgeInterval !== undefined && maxAgeInterval) || 24 * 60 * 60 * 1000;
 
   const stderrStream = teeStderr && process.stderr;
 
   const db = new Database(path);
-
   db.pragma("journal_mode = WAL");
-
   db.exec(`
     create table if not exists msgs (
         id integer primary key autoincrement,
@@ -80,10 +76,12 @@ function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
       "insert into msgs (ctx, level, msg, data) values (?, ?, ?, ?)"
     ).run(ctx, level, msg, data);
 
-    const levelName = reverseNamedLevels[level].padEnd(5);
-    stderrStream?.write(
-      `${levelName} [${new Date().toISOString()}] [${ctx}] ${msg}\n`
-    );
+    if (stderrStream) {
+      const levelName = reverseNamedLevels[level].padEnd(5);
+      stderrStream.write(
+        `${levelName} [${new Date().toISOString()}] [${ctx}] ${msg}\n`
+      );
+    }
   };
 
   let timeout;
