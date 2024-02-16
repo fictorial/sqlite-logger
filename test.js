@@ -64,6 +64,11 @@ errorLogger.warn('should not be logged');
 msgs = logging.getMessages({ ctxs: ['testing error logger'] });
 assert.equal(msgs.length, 1);
 
+infoLogger.info('hello', {foo:42});
+msgs = logging.getMessages({ ctxs: ['testing info logger'] });
+const lastMsg = msgs.at(-1);
+assert.deepEqual(lastMsg.data, {"foo":42});
+
 console.log('all tests pass');
 
 logging.close();

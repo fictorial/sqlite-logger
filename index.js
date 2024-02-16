@@ -14,7 +14,8 @@ const Database = require("better-sqlite3");
  * - `getLogger(ctx, maxLevel) -> {debug: (msg, data) => void, info: (msg, data) => void, warn: (msg, data) => void, error: (msg, data) => void}`
  *   - `data` is anything you want to log with the message; it will be serialized to JSON.
  *   - `maxLevel` can also be 'debug', 'info', 'warn', 'error'
- * - `getMessages({ levels, ctxs, after, before, limit }) -> [{ ctx, level, msg, ctime }]`
+ * - `getMessages({ levels, ctxs, after, before, limit }) -> [{ ctx, level, levelName, msg, data, ctime }]`
+ *   - JSON data is deserialized before being returned.
  */
 
 function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
@@ -29,12 +30,13 @@ function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
   const db = new Database(path);
   db.pragma("journal_mode = WAL");
   db.exec(`create table if not exists msgs (id integer primary key autoincrement,
-    ctx text, level int, msg text, ctime datetime default current_timestamp)`);
+    ctx text, level int, msg text, data json, ctime datetime default current_timestamp)`);
   if (path !== ':memory:')
     db.exec('create index if not exists idx_obvious on msgs (ctime, ctx, level)');
 
-  const log = (ctx, level, msg) => {
-    db.prepare("insert into msgs (ctx, level, msg) values (?, ?, ?)").run(ctx, level, msg);
+  const log = (ctx, level, msg, data) => {
+    data = data ? JSON.stringify(data) : null;
+    db.prepare("insert into msgs (ctx, level, msg, data) values (?, ?, ?, ?)").run(ctx, level, msg, data);
     stderrStream?.write(`${reverseNamedLevels[level]} [${ctx}] [${new Date().toISOString()}] ${msg}\n`);
   }
 
@@ -63,7 +65,7 @@ function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
       }
     },
     getMessages: ({ levels, ctxs, after, before, limit }) => {
-      let sql = 'select ctx, level, msg, ctime from msgs';
+      let sql = 'select ctx, level, msg, data, ctime from msgs';
       const clauses = [];
       const params = [];
       if (levels) {
@@ -92,7 +94,10 @@ function sqliteLogger({ path, maxAge, maxAgeInterval, teeStderr }) {
         params.push(limit);
       }
       return db.prepare(sql).all(params).map(row => ({
-        ...row, ctime: new Date(row.ctime), namedLevel: reverseNamedLevels[row.level]
+        ...row,
+        ctime: new Date(row.ctime),
+        levelName: reverseNamedLevels[row.level],
+        data: row.data ? JSON.parse(row.data) : null,
       }));
     },
     close: () => {
